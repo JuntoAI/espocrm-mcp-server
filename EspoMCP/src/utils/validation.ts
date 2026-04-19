@@ -5,6 +5,19 @@ export const EmailSchema = z.string().email("Invalid email address");
 export const PhoneSchema = z.string().regex(/^[\+]?[1-9][\d]{0,15}$/, "Invalid phone number format");
 export const DateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format");
 export const DateTimeSchema = z.string().regex(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/, "DateTime must be in YYYY-MM-DD HH:MM:SS format");
+
+// Flexible datetime schema: accepts both ISO "YYYY-MM-DDTHH:mm:ss" and space-separated "YYYY-MM-DD HH:mm:ss"
+export const FlexibleDateTimeSchema = z.string().regex(
+  /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}$/,
+  "DateTime must be in YYYY-MM-DDTHH:mm:ss or YYYY-MM-DD HH:mm:ss format"
+);
+
+// Normalizes a datetime string by replacing the T separator with a space.
+// EspoCRM expects space-separated format: "YYYY-MM-DD HH:mm:ss"
+export function normalizeDateTime(value: string): string {
+  return value.replace('T', ' ');
+}
+
 export const UrlSchema = z.string().url("Invalid URL format");
 export const IdSchema = z.string().min(1, "ID cannot be empty");
 

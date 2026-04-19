@@ -17,7 +17,10 @@ const ConfigSchema = z.object({
     apiKey: z.string().min(1, "ESPOCRM_API_KEY is required"),
     authMethod: z.enum(['apikey', 'hmac']).default('apikey'),
     secretKey: z.string().optional(),
-  }),
+  }).refine(
+    (data) => data.authMethod !== 'hmac' || (data.secretKey && data.secretKey.length > 0),
+    { message: "secretKey is required when authMethod is 'hmac'" }
+  ),
   server: z.object({
     rateLimit: z.number().min(1).default(100),
     timeout: z.number().min(1000).default(30000),

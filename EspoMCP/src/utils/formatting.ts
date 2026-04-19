@@ -181,7 +181,7 @@ export function formatContactDetails(contact: Contact): string {
   
   if (contact.emailAddress) details += `Email: ${contact.emailAddress}\n`;
   if (contact.phoneNumber) details += `Phone: ${contact.phoneNumber}\n`;
-  if (contact.title) details += `Title: ${contact.title}\n`;
+  if (contact.cRole) details += `Role: ${contact.cRole}\n`;
   if (contact.department) details += `Department: ${contact.department}\n`;
   if (contact.accountName) details += `Account: ${contact.accountName}\n`;
   if (contact.assignedUserName) details += `Assigned User: ${contact.assignedUserName}\n`;

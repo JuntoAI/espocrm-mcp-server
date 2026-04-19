@@ -27,7 +27,7 @@ import {
   formatNoteResults,
   formatLargeResultSet 
 } from "../utils/formatting.js";
-import { NameSchema, EmailSchema, PhoneSchema, IdSchema, DateSchema, UrlSchema, sanitizeInput, validateAmount, validateProbability } from "../utils/validation.js";
+import { NameSchema, EmailSchema, PhoneSchema, IdSchema, DateSchema, UrlSchema, FlexibleDateTimeSchema, sanitizeInput, normalizeDateTime, validateAmount, validateProbability } from "../utils/validation.js";
 import logger from "../utils/logger.js";
 import { isSchemaOnlyMode } from "../config/index.js";
 
@@ -40,7 +40,7 @@ export async function setupEspoCRMTools(server: Server, config: Config): Promise
   
   try {
     // Initialize EspoCRM client
-    const client = new EspoCRMClient(config.espocrm);
+    const client = new EspoCRMClient(config.espocrm, config.server.rateLimit);
     
     // Skip connection test in schema-only mode — we only need tools/list
     if (!isSchemaOnlyMode) {
@@ -73,7 +73,8 @@ export async function setupEspoCRMTools(server: Server, config: Config): Promise
                 emailAddress: { type: "string", description: "Contact's email address" },
                 phoneNumber: { type: "string", description: "Contact's phone number" },
                 accountId: { type: "string", description: "ID of the account this contact belongs to" },
-                title: { type: "string", description: "Job title or position" },
+                cRole: { type: "string", description: "Job title or role" },
+                cLinkedIn: { type: "string", description: "LinkedIn profile URL" },
                 department: { type: "string", description: "Department within the organization" },
                 description: { type: "string", description: "Additional notes about the contact" },
               },
@@ -125,6 +126,10 @@ export async function setupEspoCRMTools(server: Server, config: Config): Promise
                 emailAddress: { type: "string", description: "Main company email address" },
                 phoneNumber: { type: "string", description: "Main company phone number" },
                 description: { type: "string", description: "Additional information about the company" },
+                cRating: { type: "number", description: "Rating (0-5)" },
+                cStatus: { type: "string", description: "Pipeline status" },
+                cInvestmentFocus: { type: "string", description: "Investment focus area" },
+                cLinkedIn: { type: "string", description: "LinkedIn profile URL" },
               },
               required: ["name"],
             },
@@ -201,6 +206,7 @@ export async function setupEspoCRMTools(server: Server, config: Config): Promise
                 name: { type: "string", description: "Meeting name/title" },
                 dateStart: { type: "string", description: "Start date and time in ISO format (YYYY-MM-DDTHH:mm:ss)" },
                 dateEnd: { type: "string", description: "End date and time in ISO format (YYYY-MM-DDTHH:mm:ss)" },
+                assignedUserId: { type: "string", description: "ID of the user to assign this meeting to" },
                 location: { type: "string", description: "Meeting location" },
                 description: { type: "string", description: "Meeting description or agenda" },
                 status: { type: "string", enum: ["Planned", "Held", "Not Held"], description: "Meeting status", default: "Planned" },
@@ -209,7 +215,7 @@ export async function setupEspoCRMTools(server: Server, config: Config): Promise
                 contactsIds: { type: "array", items: { type: "string" }, description: "Array of contact IDs to invite" },
                 usersIds: { type: "array", items: { type: "string" }, description: "Array of user IDs to invite" },
               },
-              required: ["name", "dateStart", "dateEnd"],
+              required: ["name", "dateStart", "dateEnd", "assignedUserId"],
             },
           },
           {
@@ -820,7 +826,8 @@ export async function setupEspoCRMTools(server: Server, config: Config): Promise
               emailAddress: EmailSchema.optional(),
               phoneNumber: PhoneSchema.optional(),
               accountId: IdSchema.optional(),
-              title: z.string().max(100).optional(),
+              cRole: z.string().max(100).optional(),
+              cLinkedIn: z.string().url().optional(),
               department: z.string().max(100).optional(),
               description: z.string().max(1000).optional(),
             });
@@ -909,7 +916,7 @@ export async function setupEspoCRMTools(server: Server, config: Config): Promise
             
             const response = await client.search<Contact>('Contact', {
               where: where.length > 0 ? where : undefined,
-              select: ['id', 'firstName', 'lastName', 'emailAddress', 'phoneNumber', 'accountName', 'title'],
+              select: ['id', 'firstName', 'lastName', 'emailAddress', 'phoneNumber', 'accountName', 'cRole'],
               maxSize: validatedArgs.limit,
               offset: validatedArgs.offset,
               orderBy: 'lastName',
@@ -956,6 +963,10 @@ export async function setupEspoCRMTools(server: Server, config: Config): Promise
               emailAddress: EmailSchema.optional(),
               phoneNumber: PhoneSchema.optional(),
               description: z.string().max(1000).optional(),
+              cRating: z.number().min(0).max(5).optional(),
+              cStatus: z.string().optional(),
+              cInvestmentFocus: z.string().max(255).optional(),
+              cLinkedIn: z.string().url().optional(),
             });
             
             const validatedArgs = schema.parse(args);
@@ -1184,8 +1195,9 @@ export async function setupEspoCRMTools(server: Server, config: Config): Promise
           case "create_meeting": {
             const schema = z.object({
               name: z.string().min(1).max(255),
-              dateStart: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/, "Invalid ISO datetime format"),
-              dateEnd: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/, "Invalid ISO datetime format"),
+              dateStart: FlexibleDateTimeSchema,
+              dateEnd: FlexibleDateTimeSchema,
+              assignedUserId: IdSchema,
               location: z.string().max(255).optional(),
               description: z.string().max(1000).optional(),
               status: z.enum(['Planned', 'Held', 'Not Held']).default('Planned'),
@@ -1197,6 +1209,8 @@ export async function setupEspoCRMTools(server: Server, config: Config): Promise
             
             const validatedArgs = schema.parse(args);
             const sanitizedArgs = sanitizeInput(validatedArgs);
+            sanitizedArgs.dateStart = normalizeDateTime(sanitizedArgs.dateStart);
+            sanitizedArgs.dateEnd = normalizeDateTime(sanitizedArgs.dateEnd);
             const meeting = await client.post<Meeting>('Meeting', sanitizedArgs);
             
             // Link contacts and users if provided
@@ -1324,8 +1338,8 @@ export async function setupEspoCRMTools(server: Server, config: Config): Promise
             const schema = z.object({
               meetingId: IdSchema,
               name: z.string().min(1).max(255).optional(),
-              dateStart: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/, "Invalid ISO datetime format").optional(),
-              dateEnd: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/, "Invalid ISO datetime format").optional(),
+              dateStart: FlexibleDateTimeSchema.optional(),
+              dateEnd: FlexibleDateTimeSchema.optional(),
               location: z.string().max(255).optional(),
               description: z.string().max(1000).optional(),
               status: z.enum(['Planned', 'Held', 'Not Held']).optional(),
@@ -1334,8 +1348,10 @@ export async function setupEspoCRMTools(server: Server, config: Config): Promise
             const validatedArgs = schema.parse(args);
             const { meetingId, ...updateData } = validatedArgs;
             const sanitizedData = sanitizeInput(updateData);
+            if (sanitizedData.dateStart) sanitizedData.dateStart = normalizeDateTime(sanitizedData.dateStart);
+            if (sanitizedData.dateEnd) sanitizedData.dateEnd = normalizeDateTime(sanitizedData.dateEnd);
             
-            await client.put<Meeting>('Meeting', meetingId, sanitizedData);
+            await client.patch<Meeting>('Meeting', meetingId, sanitizedData);
             
             return {
               content: [
@@ -1666,7 +1682,7 @@ Current time: ${new Date().toISOString()}`;
             const { taskId, ...updateData } = validatedArgs;
             const sanitizedData = sanitizeInput(updateData);
             
-            await client.put<Task>('Task', taskId, sanitizedData);
+            await client.patch<Task>('Task', taskId, sanitizedData);
             
             return {
               content: [
@@ -1687,7 +1703,7 @@ Current time: ${new Date().toISOString()}`;
             const validatedArgs = schema.parse(args);
             const updateData = { assignedUserId: validatedArgs.assignedUserId };
             
-            await client.put<Task>('Task', validatedArgs.taskId, updateData);
+            await client.patch<Task>('Task', validatedArgs.taskId, updateData);
             
             return {
               content: [
@@ -1872,7 +1888,7 @@ Current time: ${new Date().toISOString()}`;
             const { leadId, ...updateData } = validatedArgs;
             const sanitizedData = sanitizeInput(updateData);
             
-            await client.put<Lead>('Lead', leadId, sanitizedData);
+            await client.patch<Lead>('Lead', leadId, sanitizedData);
             
             return {
               content: [
@@ -1945,7 +1961,7 @@ Current time: ${new Date().toISOString()}`;
             }
             
             // Update lead status to Converted
-            await client.put<Lead>('Lead', validatedArgs.leadId, { status: 'Converted' });
+            await client.patch<Lead>('Lead', validatedArgs.leadId, { status: 'Converted' });
             results.push(`Lead ${validatedArgs.leadId} marked as Converted`);
             
             return {
@@ -1967,7 +1983,7 @@ Current time: ${new Date().toISOString()}`;
             const validatedArgs = schema.parse(args);
             const updateData = { assignedUserId: validatedArgs.assignedUserId };
             
-            await client.put<Lead>('Lead', validatedArgs.leadId, updateData);
+            await client.patch<Lead>('Lead', validatedArgs.leadId, updateData);
             
             return {
               content: [
@@ -2034,7 +2050,7 @@ Current time: ${new Date().toISOString()}`;
             const validatedArgs = schema.parse(args);
             
             // Update user's role assignment
-            await client.put('User', validatedArgs.userId, { 
+            await client.patch('User', validatedArgs.userId, { 
               rolesIds: [validatedArgs.roleId] 
             });
             
@@ -2256,7 +2272,7 @@ Current time: ${new Date().toISOString()}`;
             const validatedArgs = schema.parse(args);
             const sanitizedData = sanitizeInput(validatedArgs.data);
             
-            await client.put<GenericEntity>(validatedArgs.entityType, validatedArgs.entityId, sanitizedData);
+            await client.patch<GenericEntity>(validatedArgs.entityType, validatedArgs.entityId, sanitizedData);
             
             return {
               content: [
@@ -2412,8 +2428,8 @@ Current time: ${new Date().toISOString()}`;
               name: z.string().min(1).max(255),
               status: z.enum(['Planned', 'Held', 'Not Held']).default('Held'),
               direction: z.enum(['Outbound', 'Inbound']),
-              dateStart: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/, "Invalid ISO datetime format").optional(),
-              dateEnd: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/, "Invalid ISO datetime format").optional(),
+              dateStart: FlexibleDateTimeSchema.optional(),
+              dateEnd: FlexibleDateTimeSchema.optional(),
               description: z.string().max(1000).optional(),
               phoneNumber: PhoneSchema.optional(),
               assignedUserId: IdSchema.optional(),
@@ -2424,6 +2440,8 @@ Current time: ${new Date().toISOString()}`;
             
             const validatedArgs = schema.parse(args);
             const sanitizedArgs = sanitizeInput(validatedArgs);
+            if (sanitizedArgs.dateStart) sanitizedArgs.dateStart = normalizeDateTime(sanitizedArgs.dateStart);
+            if (sanitizedArgs.dateEnd) sanitizedArgs.dateEnd = normalizeDateTime(sanitizedArgs.dateEnd);
             const call = await client.post<Call>('Call', sanitizedArgs);
             
             // Link contacts if provided
@@ -2722,7 +2740,7 @@ Current time: ${new Date().toISOString()}`;
             const { caseId, ...updateData } = validatedArgs;
             const sanitizedData = sanitizeInput(updateData);
             
-            await client.put<Case>('Case', caseId, sanitizedData);
+            await client.patch<Case>('Case', caseId, sanitizedData);
             
             return {
               content: [

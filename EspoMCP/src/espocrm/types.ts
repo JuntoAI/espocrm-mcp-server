@@ -11,7 +11,8 @@ export interface Contact {
   createdAt?: string;
   modifiedAt?: string;
   description?: string;
-  title?: string;
+  cRole?: string;
+  cLinkedIn?: string;
   department?: string;
 }
 
@@ -30,6 +31,10 @@ export interface Account {
   description?: string;
   billingAddress?: Address;
   shippingAddress?: Address;
+  cRating?: number;
+  cStatus?: string;
+  cInvestmentFocus?: string;
+  cLinkedIn?: string;
 }
 
 export interface Opportunity {
