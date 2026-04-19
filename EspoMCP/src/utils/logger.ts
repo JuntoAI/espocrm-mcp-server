@@ -1,5 +1,12 @@
 import winston from 'winston';
 
+/**
+ * When running in schema-only mode (spawned as a child process for
+ * tools/list), all logging MUST go to stderr, not stdout. The stdio
+ * MCP transport uses stdout exclusively for JSON-RPC messages.
+ */
+const useStderr = process.env.SCHEMA_ONLY === 'true';
+
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
   format: winston.format.combine(
@@ -13,8 +20,9 @@ const logger = winston.createLogger({
   defaultMeta: { service: 'espocrm-mcp-server' },
   transports: [
     new winston.transports.Console({
+      stderrLevels: useStderr ? ['error', 'warn', 'info', 'debug'] : [],
       format: winston.format.combine(
-        winston.format.colorize(),
+        ...(useStderr ? [] : [winston.format.colorize()]),
         winston.format.simple()
       )
     })

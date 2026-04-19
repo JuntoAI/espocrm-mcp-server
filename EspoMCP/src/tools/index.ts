@@ -29,27 +29,33 @@ import {
 } from "../utils/formatting.js";
 import { NameSchema, EmailSchema, PhoneSchema, IdSchema, DateSchema, UrlSchema, sanitizeInput, validateAmount, validateProbability } from "../utils/validation.js";
 import logger from "../utils/logger.js";
+import { isSchemaOnlyMode } from "../config/index.js";
 
 export async function setupEspoCRMTools(server: Server, config: Config): Promise<void> {
   logger.info('Setting up EspoCRM tools', { 
     baseUrl: config.espocrm.baseUrl,
-    authMethod: config.espocrm.authMethod 
+    authMethod: config.espocrm.authMethod,
+    schemaOnly: isSchemaOnlyMode,
   });
   
   try {
     // Initialize EspoCRM client
     const client = new EspoCRMClient(config.espocrm);
     
-    // Test connection before setting up tools
-    const connectionTest = await client.testConnection();
-    if (!connectionTest.success) {
-      throw new Error("Failed to connect to EspoCRM. Please check your configuration.");
+    // Skip connection test in schema-only mode — we only need tools/list
+    if (!isSchemaOnlyMode) {
+      const connectionTest = await client.testConnection();
+      if (!connectionTest.success) {
+        throw new Error("Failed to connect to EspoCRM. Please check your configuration.");
+      }
+      
+      logger.info('EspoCRM connection verified', { 
+        version: connectionTest.version,
+        user: connectionTest.user?.userName 
+      });
+    } else {
+      logger.info('Schema-only mode: skipping EspoCRM connection test');
     }
-    
-    logger.info('EspoCRM connection verified', { 
-      version: connectionTest.version,
-      user: connectionTest.user?.userName 
-    });
     
     // Register tools list handler
     server.setRequestHandler(ListToolsRequestSchema, async (request) => {
