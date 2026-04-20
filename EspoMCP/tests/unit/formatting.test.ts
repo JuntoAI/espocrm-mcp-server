@@ -566,10 +566,17 @@ describe('formatGenericEntityResults', () => {
   });
 
   it('formats entities with firstName and lastName', () => {
-    const entities: GenericEntity[] = [{ id: '1', name: 'Widget A', firstName: 'John', lastName: 'Doe' }];
+    // When name is absent, falls back to firstName + lastName concatenation
+    const entities: GenericEntity[] = [{ id: '1', firstName: 'John', lastName: 'Doe' }];
     const result = formatGenericEntityResults(entities, 'Widget');
     expect(result).toContain('Found 1 Widget record:');
     expect(result).toContain('John Doe');
+  });
+
+  it('prefers name over firstName+lastName when both present', () => {
+    const entities: GenericEntity[] = [{ id: '1', name: 'Widget A', firstName: 'John', lastName: 'Doe' }];
+    const result = formatGenericEntityResults(entities, 'Widget');
+    expect(result).toContain('Widget A');
   });
 
   it('falls back to id when no name fields', () => {

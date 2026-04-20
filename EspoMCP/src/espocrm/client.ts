@@ -208,7 +208,17 @@ export class EspoCRMClient {
       const params: any = {};
       
       if (searchParams.where) {
-        params.where = JSON.stringify(searchParams.where);
+        // EspoCRM expects indexed query params: where[0][type], where[0][attribute], where[0][value]
+        // Passing a JSON string is silently ignored — the API returns all records unfiltered.
+        searchParams.where.forEach((clause, index) => {
+          params[`where[${index}][type]`] = clause.type;
+          if (clause.attribute !== undefined) {
+            params[`where[${index}][attribute]`] = clause.attribute;
+          }
+          if (clause.value !== undefined) {
+            params[`where[${index}][value]`] = clause.value;
+          }
+        });
       }
       if (searchParams.select) {
         params.select = searchParams.select.join(',');

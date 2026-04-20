@@ -136,8 +136,11 @@ export function formatGenericEntityResults(entities: GenericEntity[], entityType
   }
   
   const formatted = entities.map(entity => {
-    // Try to find common display fields
-    const name = entity.name || entity.firstName && entity.lastName ? `${entity.firstName} ${entity.lastName}` : entity.id;
+    // Operator precedence fix: evaluate name concatenation explicitly
+    const name = entity.name
+      || (entity.firstName && entity.lastName ? `${entity.firstName} ${entity.lastName}` : null)
+      || entity.id
+      || '(unknown)';
     const email = entity.emailAddress ? ` (${entity.emailAddress})` : '';
     const status = entity.status ? ` | Status: ${entity.status}` : '';
     return `${name}${email}${status}`;

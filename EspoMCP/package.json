@@ -8,7 +8,7 @@
     "build": "tsc && chmod +x build/index.js",
     "dev": "tsx src/index.ts",
     "start": "node build/index.js",
-    "test": "jest",
+    "test": "node --experimental-vm-modules ./node_modules/jest-cli/bin/jest.js",
     "test:watch": "jest --watch",
     "lint": "eslint src/**/*.ts",
     "docker:build": "docker build -t espocrm-mcp-server .",

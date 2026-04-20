@@ -295,7 +295,9 @@ describe('EspoCRMClient', () => {
 
       expect(axiosInstance.get).toHaveBeenCalledWith('Contact', {
         params: {
-          where: JSON.stringify([{ type: 'equals', attribute: 'firstName', value: 'John' }]),
+          'where[0][type]': 'equals',
+          'where[0][attribute]': 'firstName',
+          'where[0][value]': 'John',
           select: 'firstName,lastName',
           orderBy: 'firstName',
           order: 'desc',
