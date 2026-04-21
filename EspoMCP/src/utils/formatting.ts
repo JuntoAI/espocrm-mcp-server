@@ -134,18 +134,36 @@ export function formatGenericEntityResults(entities: GenericEntity[], entityType
   if (!entities || entities.length === 0) {
     return `No ${entityType} records found.`;
   }
-  
+
+  // Standard display fields that get special treatment in the summary line
+  const SUMMARY_FIELDS = new Set(['id', 'name', 'firstName', 'lastName', 'emailAddress', 'status']);
+
   const formatted = entities.map(entity => {
-    // Operator precedence fix: evaluate name concatenation explicitly
     const name = entity.name
       || (entity.firstName && entity.lastName ? `${entity.firstName} ${entity.lastName}` : null)
       || entity.id
       || '(unknown)';
     const email = entity.emailAddress ? ` (${entity.emailAddress})` : '';
     const status = entity.status ? ` | Status: ${entity.status}` : '';
-    return `${name}${email}${status}`;
-  }).join('\n');
-  
+
+    // Output any additional fields (e.g. custom fields passed via select)
+    const extras = Object.entries(entity)
+      .filter(([key, value]) =>
+        !SUMMARY_FIELDS.has(key) &&
+        value !== null &&
+        value !== undefined &&
+        value !== ''
+      )
+      .map(([key, value]) => {
+        const label = key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1');
+        const display = Array.isArray(value) ? value.join(', ') : String(value);
+        return `  ${label}: ${display}`;
+      })
+      .join('\n');
+
+    return `${name}${email}${status}${extras ? '\n' + extras : ''}`;
+  }).join('\n---\n');
+
   return `Found ${entities.length} ${entityType} record${entities.length === 1 ? '' : 's'}:\n${formatted}`;
 }
 

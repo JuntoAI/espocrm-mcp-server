@@ -591,6 +591,24 @@ describe('formatGenericEntityResults', () => {
     expect(result).toContain('a@b.com');
     expect(result).toContain('Status: Active');
   });
+
+  it('outputs custom fields passed via select', () => {
+    const entities: GenericEntity[] = [{ id: '1', firstName: 'Jane', lastName: 'Doe', juntoaiServices: ['echo', 'kinetic'], juntoaiMarketingEmail: true }];
+    const result = formatGenericEntityResults(entities, 'Contact');
+    expect(result).toContain('Jane Doe');
+    expect(result).toContain('echo, kinetic');
+    expect(result).toContain('true');
+  });
+
+  it('separates multiple records with ---', () => {
+    const entities: GenericEntity[] = [
+      { id: '1', name: 'A', juntoaiServices: ['echo'] },
+      { id: '2', name: 'B', juntoaiServices: ['kinetic'] },
+    ];
+    const result = formatGenericEntityResults(entities, 'Contact');
+    expect(result).toContain('---');
+    expect(result).toContain('Found 2 Contact records:');
+  });
 });
 
 describe('formatGenericEntityDetails', () => {
