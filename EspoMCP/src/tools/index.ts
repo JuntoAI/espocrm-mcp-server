@@ -39,12 +39,27 @@ export async function setupEspoCRMTools(server: Server, config: Config): Promise
   });
   
   try {
-    // Initialize EspoCRM client
-    const client = new EspoCRMClient(config.espocrm, config.server.rateLimit);
+    // Initialize default EspoCRM client
+    const defaultClient = new EspoCRMClient(config.espocrm, config.server.rateLimit);
+
+    // Per-user API key override: cache clients to avoid re-creating on every request
+    const clientCache = new Map<string, EspoCRMClient>();
+
+    function getClientForKey(apiKey: string): EspoCRMClient {
+      let cached = clientCache.get(apiKey);
+      if (!cached) {
+        cached = new EspoCRMClient(
+          { ...config.espocrm, apiKey },
+          config.server.rateLimit,
+        );
+        clientCache.set(apiKey, cached);
+      }
+      return cached;
+    }
     
     // Skip connection test in schema-only mode — we only need tools/list
     if (!isSchemaOnlyMode) {
-      const connectionTest = await client.testConnection();
+      const connectionTest = await defaultClient.testConnection();
       if (!connectionTest.success) {
         throw new Error("Failed to connect to EspoCRM. Please check your configuration.");
       }
@@ -816,6 +831,13 @@ export async function setupEspoCRMTools(server: Server, config: Config): Promise
     // Register tool call handler
     server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest): Promise<CallToolResult> => {
       const { name, arguments: args } = request.params;
+
+      // Per-user API key override support
+      const apiKeyOverride = (args as Record<string, unknown>)?._apiKeyOverride as string | undefined;
+      if (args && '_apiKeyOverride' in (args as Record<string, unknown>)) {
+        delete (args as Record<string, unknown>)._apiKeyOverride;
+      }
+      const client = apiKeyOverride ? getClientForKey(apiKeyOverride) : defaultClient;
 
       try {
         switch (name) {
