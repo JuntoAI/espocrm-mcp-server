@@ -254,7 +254,7 @@ export interface WhereClause {
   type: 'equals' | 'notEquals' | 'contains' | 'notContains' | 'startsWith' | 'endsWith' | 
         'greaterThan' | 'lessThan' | 'greaterThanOrEquals' | 'lessThanOrEquals' | 
         'in' | 'notIn' | 'isNull' | 'isNotNull' | 'linkedWith' | 'notLinkedWith' | 
-        'and' | 'or';
+        'textFilter' | 'and' | 'or';
   attribute?: string;
   value?: any;
 }

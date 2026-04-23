@@ -879,12 +879,8 @@ export async function setupEspoCRMTools(server: Server, config: Config): Promise
             
             if (validatedArgs.searchTerm) {
               where.push({
-                type: 'or' as const,
-                value: [
-                  { type: 'contains' as const, attribute: 'firstName', value: validatedArgs.searchTerm },
-                  { type: 'contains' as const, attribute: 'lastName', value: validatedArgs.searchTerm },
-                  { type: 'contains' as const, attribute: 'emailAddress', value: validatedArgs.searchTerm }
-                ]
+                type: 'textFilter' as const,
+                value: validatedArgs.searchTerm
               });
             }
             
