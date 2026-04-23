@@ -1,11 +1,18 @@
 import winston from 'winston';
 
 /**
- * When running in schema-only mode (spawned as a child process for
- * tools/list), all logging MUST go to stderr, not stdout. The stdio
- * MCP transport uses stdout exclusively for JSON-RPC messages.
+ * When running as a child process over stdio transport, all logging
+ * MUST go to stderr, not stdout. The stdio MCP transport uses stdout
+ * exclusively for JSON-RPC messages. Any non-JSON output on stdout
+ * breaks the protocol.
+ *
+ * We detect this by checking if stdout is a TTY. When spawned as a
+ * child process by the AI backend, stdout is a pipe (not a TTY).
+ * When run standalone (e.g., for debugging), stdout is a TTY.
+ *
+ * FORCE_STDERR=true can also be set explicitly.
  */
-const useStderr = process.env.SCHEMA_ONLY === 'true';
+const useStderr = !process.stdout.isTTY || process.env.FORCE_STDERR === 'true';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',

@@ -11,9 +11,9 @@ export interface Contact {
   createdAt?: string;
   modifiedAt?: string;
   description?: string;
-  cRole?: string;
-  cLinkedIn?: string;
+  title?: string;
   department?: string;
+  [key: string]: any;
 }
 
 export interface Account {
@@ -31,10 +31,7 @@ export interface Account {
   description?: string;
   billingAddress?: Address;
   shippingAddress?: Address;
-  cRating?: number;
-  cStatus?: string;
-  cInvestmentFocus?: string;
-  cLinkedIn?: string;
+  [key: string]: any;
 }
 
 export interface Opportunity {
@@ -53,6 +50,7 @@ export interface Opportunity {
   modifiedAt?: string;
   description?: string;
   nextStep?: string;
+  [key: string]: any;
 }
 
 export interface Lead {
@@ -71,6 +69,7 @@ export interface Lead {
   createdAt?: string;
   modifiedAt?: string;
   description?: string;
+  [key: string]: any;
 }
 
 export interface Task {
@@ -90,6 +89,7 @@ export interface Task {
   createdAt?: string;
   modifiedAt?: string;
   description?: string;
+  [key: string]: any;
 }
 
 export interface Meeting {
@@ -110,6 +110,7 @@ export interface Meeting {
   googleEventId?: string;
   createdAt?: string;
   modifiedAt?: string;
+  [key: string]: any;
 }
 
 export interface User {
@@ -123,6 +124,7 @@ export interface User {
   type?: 'admin' | 'regular' | 'portal' | 'api';
   createdAt?: string;
   modifiedAt?: string;
+  [key: string]: any;
 }
 
 export interface Address {
@@ -145,6 +147,7 @@ export interface Team {
   positionList?: string[];
   createdAt?: string;
   modifiedAt?: string;
+  [key: string]: any;
 }
 
 export interface Role {
@@ -155,6 +158,7 @@ export interface Role {
   fieldData?: Record<string, any>;
   createdAt?: string;
   modifiedAt?: string;
+  [key: string]: any;
 }
 
 export interface Call {
@@ -173,6 +177,7 @@ export interface Call {
   phoneNumber?: string;
   createdAt?: string;
   modifiedAt?: string;
+  [key: string]: any;
 }
 
 export interface Case {
@@ -193,6 +198,7 @@ export interface Case {
   description?: string;
   createdAt?: string;
   modifiedAt?: string;
+  [key: string]: any;
 }
 
 export interface Note {
@@ -207,6 +213,7 @@ export interface Note {
   createdById?: string;
   createdAt?: string;
   modifiedAt?: string;
+  [key: string]: any;
 }
 
 export interface Document {
@@ -225,6 +232,7 @@ export interface Document {
   file?: any;
   createdAt?: string;
   modifiedAt?: string;
+  [key: string]: any;
 }
 
 export interface GenericEntity {

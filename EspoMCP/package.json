@@ -26,7 +26,10 @@
     "llm",
     "anthropic"
   ],
-  "author": "JuntoAI",
+  "author": "zaphod-black",
+  "contributors": [
+    "JuntoAI"
+  ],
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.16.0",

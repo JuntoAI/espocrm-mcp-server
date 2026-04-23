@@ -88,8 +88,6 @@ export async function setupEspoCRMTools(server: Server, config: Config): Promise
                 emailAddress: { type: "string", description: "Contact's email address" },
                 phoneNumber: { type: "string", description: "Contact's phone number" },
                 accountId: { type: "string", description: "ID of the account this contact belongs to" },
-                cRole: { type: "string", description: "Job title or role" },
-                cLinkedIn: { type: "string", description: "LinkedIn profile URL" },
                 department: { type: "string", description: "Department within the organization" },
                 description: { type: "string", description: "Additional notes about the contact" },
               },
@@ -141,10 +139,6 @@ export async function setupEspoCRMTools(server: Server, config: Config): Promise
                 emailAddress: { type: "string", description: "Main company email address" },
                 phoneNumber: { type: "string", description: "Main company phone number" },
                 description: { type: "string", description: "Additional information about the company" },
-                cRating: { type: "number", description: "Rating (0-5)" },
-                cStatus: { type: "string", description: "Pipeline status" },
-                cInvestmentFocus: { type: "string", description: "Investment focus area" },
-                cLinkedIn: { type: "string", description: "LinkedIn profile URL" },
               },
               required: ["name"],
             },
@@ -848,8 +842,6 @@ export async function setupEspoCRMTools(server: Server, config: Config): Promise
               emailAddress: EmailSchema.optional(),
               phoneNumber: PhoneSchema.optional(),
               accountId: IdSchema.optional(),
-              cRole: z.string().max(100).optional(),
-              cLinkedIn: z.string().url().optional(),
               department: z.string().max(100).optional(),
               description: z.string().max(1000).optional(),
             });
@@ -938,7 +930,7 @@ export async function setupEspoCRMTools(server: Server, config: Config): Promise
             
             const response = await client.search<Contact>('Contact', {
               where: where.length > 0 ? where : undefined,
-              select: ['id', 'firstName', 'lastName', 'emailAddress', 'phoneNumber', 'accountName', 'cRole'],
+              select: ['id', 'firstName', 'lastName', 'emailAddress', 'phoneNumber', 'accountName'],
               maxSize: validatedArgs.limit,
               offset: validatedArgs.offset,
               orderBy: 'lastName',
@@ -985,10 +977,6 @@ export async function setupEspoCRMTools(server: Server, config: Config): Promise
               emailAddress: EmailSchema.optional(),
               phoneNumber: PhoneSchema.optional(),
               description: z.string().max(1000).optional(),
-              cRating: z.number().min(0).max(5).optional(),
-              cStatus: z.string().optional(),
-              cInvestmentFocus: z.string().max(255).optional(),
-              cLinkedIn: z.string().url().optional(),
             });
             
             const validatedArgs = schema.parse(args);

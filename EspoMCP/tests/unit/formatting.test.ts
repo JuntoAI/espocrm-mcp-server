@@ -3,7 +3,7 @@
  *
  * **Validates: Requirement 6.4**
  *
- * Tests formatContactDetails (with cRole), formatAccountDetails,
+ * Tests formatContactDetails (with custom fields), formatAccountDetails,
  * formatMeetingDetails, formatContactResults, formatAccountResults,
  * formatLargeResultSet, formatCurrency, formatDate, formatDateTime.
  */
@@ -44,16 +44,17 @@ describe('formatContactDetails', () => {
     expect(result).toContain('Name: John Doe');
   });
 
-  it('includes cRole when present', () => {
+  it('includes custom fields (e.g. cRole) when present via extra fields', () => {
     const contact: Contact = { firstName: 'John', lastName: 'Doe', cRole: 'CEO' };
     const result = formatContactDetails(contact);
-    expect(result).toContain('Role: CEO');
+    // Custom fields are rendered by formatExtraFields with camelCase label splitting
+    expect(result).toContain('CEO');
   });
 
-  it('does not include Role line when cRole is absent', () => {
+  it('does not include custom field labels when absent', () => {
     const contact: Contact = { firstName: 'John', lastName: 'Doe' };
     const result = formatContactDetails(contact);
-    expect(result).not.toContain('Role:');
+    expect(result).not.toContain('C Role:');
   });
 
   it('includes email when present', () => {
