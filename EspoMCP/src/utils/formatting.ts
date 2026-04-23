@@ -32,11 +32,12 @@ export function formatContactResults(contacts: Contact[]): string {
   }
 
   const formatted = contacts.map(contact => {
+    const id = contact.id ? `[${contact.id}] ` : '';
     const name = `${contact.firstName} ${contact.lastName}`;
     const email = contact.emailAddress ? ` (${contact.emailAddress})` : '';
     const account = contact.accountName ? ` - ${contact.accountName}` : '';
     const phone = contact.phoneNumber ? ` | Phone: ${contact.phoneNumber}` : '';
-    return `${name}${email}${account}${phone}`;
+    return `${id}${name}${email}${account}${phone}`;
   }).join('\n');
 
   return `Found ${contacts.length} contact${contacts.length === 1 ? '' : 's'}:\n${formatted}`;
@@ -48,10 +49,11 @@ export function formatAccountResults(accounts: Account[]): string {
   }
 
   const formatted = accounts.map(account => {
+    const id = account.id ? `[${account.id}] ` : '';
     const type = account.type ? ` (${account.type})` : '';
     const industry = account.industry ? ` | ${account.industry}` : '';
     const website = account.website ? ` | ${account.website}` : '';
-    return `${account.name}${type}${industry}${website}`;
+    return `${id}${account.name}${type}${industry}${website}`;
   }).join('\n');
 
   return `Found ${accounts.length} account${accounts.length === 1 ? '' : 's'}:\n${formatted}`;
@@ -63,10 +65,11 @@ export function formatOpportunityResults(opportunities: Opportunity[]): string {
   }
 
   const formatted = opportunities.map(opp => {
+    const id = opp.id ? `[${opp.id}] ` : '';
     const amount = opp.amount ? ` | ${formatCurrency(opp.amount)}` : '';
     const probability = opp.probability ? ` | ${opp.probability}%` : '';
     const account = opp.accountName ? ` | ${opp.accountName}` : '';
-    return `${opp.name} (${opp.stage})${amount}${probability}${account} | Close: ${opp.closeDate}`;
+    return `${id}${opp.name} (${opp.stage})${amount}${probability}${account} | Close: ${opp.closeDate}`;
   }).join('\n');
 
   return `Found ${opportunities.length} opportunit${opportunities.length === 1 ? 'y' : 'ies'}:\n${formatted}`;
@@ -78,11 +81,12 @@ export function formatLeadResults(leads: Lead[]): string {
   }
 
   const formatted = leads.map(lead => {
+    const id = lead.id ? `[${lead.id}] ` : '';
     const name = `${lead.firstName} ${lead.lastName}`;
     const email = lead.emailAddress ? ` (${lead.emailAddress})` : '';
     const company = lead.accountName ? ` | ${lead.accountName}` : '';
     const source = ` | Source: ${lead.source}`;
-    return `${name}${email} (${lead.status})${company}${source}`;
+    return `${id}${name}${email} (${lead.status})${company}${source}`;
   }).join('\n');
 
   return `Found ${leads.length} lead${leads.length === 1 ? '' : 's'}:\n${formatted}`;
@@ -94,11 +98,12 @@ export function formatTaskResults(tasks: Task[]): string {
   }
 
   const formatted = tasks.map(task => {
+    const id = task.id ? `[${task.id}] ` : '';
     const priority = task.priority !== 'Normal' ? ` [${task.priority}]` : '';
     const assignee = task.assignedUserName ? ` | Assigned: ${task.assignedUserName}` : '';
     const parent = task.parentName ? ` | Related: ${task.parentName}` : '';
     const dueDate = task.dateEnd ? ` | Due: ${formatDate(task.dateEnd)}` : '';
-    return `${task.name} (${task.status})${priority}${assignee}${parent}${dueDate}`;
+    return `${id}${task.name} (${task.status})${priority}${assignee}${parent}${dueDate}`;
   }).join('\n');
 
   return `Found ${tasks.length} task${tasks.length === 1 ? '' : 's'}:\n${formatted}`;
@@ -305,10 +310,11 @@ export function formatMeetingResults(meetings: Meeting[]): string {
   }
 
   const formatted = meetings.map(meeting => {
+    const id = meeting.id ? `[${meeting.id}] ` : '';
     const dateTime = `${formatDateTime(meeting.dateStart)} - ${formatDateTime(meeting.dateEnd)}`;
     const location = meeting.location ? ` | ${meeting.location}` : '';
     const attendees = meeting.contacts?.length ? ` | ${meeting.contacts.length} attendees` : '';
-    return `${meeting.name} (${meeting.status}) | ${dateTime}${location}${attendees}`;
+    return `${id}${meeting.name} (${meeting.status}) | ${dateTime}${location}${attendees}`;
   }).join('\n');
 
   return `Found ${meetings.length} meeting${meetings.length === 1 ? '' : 's'}:\n${formatted}`;
