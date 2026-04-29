@@ -833,6 +833,13 @@ export async function setupEspoCRMTools(server: Server, config: Config): Promise
       }
       const client = apiKeyOverride ? getClientForKey(apiKeyOverride) : defaultClient;
 
+      // Per-user ID override — used to set assignedUserId on created records
+      // so they are assigned to the logged-in user, not the shared API user.
+      const userIdOverride = (args as Record<string, unknown>)?._userIdOverride as string | undefined;
+      if (args && '_userIdOverride' in (args as Record<string, unknown>)) {
+        delete (args as Record<string, unknown>)._userIdOverride;
+      }
+
       try {
         switch (name) {
           case "create_contact": {
@@ -848,6 +855,7 @@ export async function setupEspoCRMTools(server: Server, config: Config): Promise
             
             const validatedArgs = schema.parse(args);
             const sanitizedArgs = sanitizeInput(validatedArgs);
+            if (userIdOverride) sanitizedArgs.assignedUserId = userIdOverride;
             const contact = await client.post<Contact>('Contact', sanitizedArgs);
             
             return {
@@ -977,6 +985,7 @@ export async function setupEspoCRMTools(server: Server, config: Config): Promise
             
             const validatedArgs = schema.parse(args);
             const sanitizedArgs = sanitizeInput(validatedArgs);
+            if (userIdOverride) sanitizedArgs.assignedUserId = userIdOverride;
             const account = await client.post<Account>('Account', sanitizedArgs);
             
             return {
@@ -1107,6 +1116,7 @@ export async function setupEspoCRMTools(server: Server, config: Config): Promise
             }
             
             const sanitizedArgs = sanitizeInput(validatedArgs);
+            if (userIdOverride) sanitizedArgs.assignedUserId = userIdOverride;
             const opportunity = await client.post<Opportunity>('Opportunity', sanitizedArgs);
             
             return {
@@ -1217,6 +1227,7 @@ export async function setupEspoCRMTools(server: Server, config: Config): Promise
             const sanitizedArgs = sanitizeInput(validatedArgs);
             sanitizedArgs.dateStart = normalizeDateTime(sanitizedArgs.dateStart);
             sanitizedArgs.dateEnd = normalizeDateTime(sanitizedArgs.dateEnd);
+            if (userIdOverride && !sanitizedArgs.assignedUserId) sanitizedArgs.assignedUserId = userIdOverride;
             const meeting = await client.post<Meeting>('Meeting', sanitizedArgs);
             
             // Link contacts and users if provided
@@ -1531,6 +1542,7 @@ Current time: ${new Date().toISOString()}`;
             
             const validatedArgs = schema.parse(args);
             const sanitizedArgs = sanitizeInput(validatedArgs);
+            if (userIdOverride && !sanitizedArgs.assignedUserId) sanitizedArgs.assignedUserId = userIdOverride;
             const task = await client.post<Task>('Task', sanitizedArgs);
             
             return {
@@ -1738,6 +1750,7 @@ Current time: ${new Date().toISOString()}`;
             
             const validatedArgs = schema.parse(args);
             const sanitizedArgs = sanitizeInput(validatedArgs);
+            if (userIdOverride && !sanitizedArgs.assignedUserId) sanitizedArgs.assignedUserId = userIdOverride;
             const lead = await client.post<Lead>('Lead', sanitizedArgs);
             
             return {
@@ -1931,7 +1944,7 @@ Current time: ${new Date().toISOString()}`;
                 name: lead.accountName,
                 website: lead.website,
                 industry: lead.industry,
-                assignedUserId: lead.assignedUserId,
+                assignedUserId: userIdOverride || lead.assignedUserId,
               });
               accountId = account.id;
               results.push(`Created account: ${lead.accountName} (ID: ${account.id})`);
@@ -1945,7 +1958,7 @@ Current time: ${new Date().toISOString()}`;
                 emailAddress: lead.emailAddress,
                 phoneNumber: lead.phoneNumber,
                 accountId: accountId,
-                assignedUserId: lead.assignedUserId,
+                assignedUserId: userIdOverride || lead.assignedUserId,
                 description: lead.description,
               });
               contactId = contact.id;
@@ -1960,7 +1973,7 @@ Current time: ${new Date().toISOString()}`;
                 stage: 'Prospecting',
                 amount: validatedArgs.opportunityAmount,
                 closeDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
-                assignedUserId: lead.assignedUserId,
+                assignedUserId: userIdOverride || lead.assignedUserId,
               });
               opportunityId = opportunity.id;
               results.push(`Created opportunity: ${validatedArgs.opportunityName} (ID: ${opportunity.id})`);
@@ -2203,6 +2216,7 @@ Current time: ${new Date().toISOString()}`;
             
             const validatedArgs = schema.parse(args);
             const sanitizedData = sanitizeInput(validatedArgs.data);
+            if (userIdOverride && !sanitizedData.assignedUserId) sanitizedData.assignedUserId = userIdOverride;
             
             const entity = await client.post<GenericEntity>(validatedArgs.entityType, sanitizedData);
             
@@ -2448,6 +2462,7 @@ Current time: ${new Date().toISOString()}`;
             const sanitizedArgs = sanitizeInput(validatedArgs);
             if (sanitizedArgs.dateStart) sanitizedArgs.dateStart = normalizeDateTime(sanitizedArgs.dateStart);
             if (sanitizedArgs.dateEnd) sanitizedArgs.dateEnd = normalizeDateTime(sanitizedArgs.dateEnd);
+            if (userIdOverride && !sanitizedArgs.assignedUserId) sanitizedArgs.assignedUserId = userIdOverride;
             const call = await client.post<Call>('Call', sanitizedArgs);
             
             // Link contacts if provided
@@ -2595,6 +2610,7 @@ Current time: ${new Date().toISOString()}`;
             
             const validatedArgs = schema.parse(args);
             const sanitizedArgs = sanitizeInput(validatedArgs);
+            if (userIdOverride && !sanitizedArgs.assignedUserId) sanitizedArgs.assignedUserId = userIdOverride;
             const supportCase = await client.post<Case>('Case', sanitizedArgs);
             
             return {
