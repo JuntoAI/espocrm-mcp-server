@@ -2,7 +2,7 @@ import { z } from "zod";
 
 // Common validation schemas
 export const EmailSchema = z.string().email("Invalid email address");
-export const PhoneSchema = z.string().regex(/^[\+]?[1-9][\d]{0,15}$/, "Invalid phone number format");
+export const PhoneSchema = z.string().regex(/^[\+]?[\d][\d\s\-\.\(\)]{0,25}$/, "Invalid phone number format");
 export const DateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format");
 export const DateTimeSchema = z.string().regex(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/, "DateTime must be in YYYY-MM-DD HH:MM:SS format");
 
