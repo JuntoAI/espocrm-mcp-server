@@ -18,6 +18,24 @@ export function normalizeDateTime(value: string): string {
   return value.replace('T', ' ');
 }
 
+// Normalizes a date string by stripping any time component.
+// Accepts: "2026-05-22", "2026-05-22T10:00:00", "2026-05-22 10:00:00", "2026-05-22T10:00:00Z", "2026-05-22T10:00:00+02:00"
+// Returns: "2026-05-22"
+export function normalizeDate(value: string): string {
+  // Strip everything after the date portion (T, space, or any time/timezone info)
+  const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
+  return match ? match[1] : value;
+}
+
+// Flexible date schema that accepts date-only or datetime strings and normalizes to YYYY-MM-DD.
+// Use .transform() in Zod pipelines for automatic normalization.
+export const FlexibleDateSchema = z.string()
+  .regex(
+    /^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2})?(Z|[+-]\d{2}:\d{2})?)?$/,
+    "Date must start with YYYY-MM-DD (time component will be stripped if provided)"
+  )
+  .transform(normalizeDate);
+
 export const UrlSchema = z.string().url("Invalid URL format");
 export const IdSchema = z.string().min(1, "ID cannot be empty");
 
@@ -88,4 +106,21 @@ export function validateProbability(probability: number): void {
   if (probability < 0 || probability > 100) {
     throw new Error("Probability must be between 0 and 100");
   }
+}
+
+// Task-specific date fields that should be date-only (YYYY-MM-DD)
+const TASK_DATE_FIELDS = ['dateEnd', 'dateStart', 'dateStartDate', 'dateEndDate'];
+
+// Normalizes date fields in entity data when the entity type is Task.
+// Strips time components from date-only fields to prevent EspoCRM validation errors.
+export function normalizeTaskDates(entityType: string, data: Record<string, any>): Record<string, any> {
+  if (entityType !== 'Task') return data;
+  
+  const normalized = { ...data };
+  for (const field of TASK_DATE_FIELDS) {
+    if (normalized[field] && typeof normalized[field] === 'string') {
+      normalized[field] = normalizeDate(normalized[field]);
+    }
+  }
+  return normalized;
 }

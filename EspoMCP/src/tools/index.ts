@@ -27,7 +27,7 @@ import {
   formatNoteResults,
   formatLargeResultSet 
 } from "../utils/formatting.js";
-import { NameSchema, EmailSchema, PhoneSchema, IdSchema, DateSchema, UrlSchema, FlexibleDateTimeSchema, sanitizeInput, normalizeDateTime, validateAmount, validateProbability } from "../utils/validation.js";
+import { NameSchema, EmailSchema, PhoneSchema, IdSchema, DateSchema, UrlSchema, FlexibleDateTimeSchema, FlexibleDateSchema, sanitizeInput, normalizeDateTime, normalizeDate, normalizeTaskDates, validateAmount, validateProbability } from "../utils/validation.js";
 import logger from "../utils/logger.js";
 import { isSchemaOnlyMode } from "../config/index.js";
 
@@ -306,18 +306,18 @@ export async function setupEspoCRMTools(server: Server, config: Config): Promise
           // Task tools
           {
             name: "create_task",
-            description: "Create a new task and assign it to a user with optional parent entity (Lead, Account, Contact, Opportunity)",
+            description: "Create a new task. IMPORTANT: Only use the fields listed here — no other fields are accepted. The dateEnd field accepts ONLY a date (YYYY-MM-DD), never include a time component.",
             inputSchema: {
               type: "object",
               properties: {
-                name: { type: "string", description: "Task name/title" },
-                assignedUserId: { type: "string", description: "ID of the user to assign this task to" },
-                parentType: { type: "string", enum: ["Lead", "Account", "Contact", "Opportunity"], description: "Type of parent entity" },
-                parentId: { type: "string", description: "ID of the parent entity" },
+                name: { type: "string", description: "Task name/title (required, max 255 chars)" },
+                assignedUserId: { type: "string", description: "ID of the user to assign this task to (use search_users or get_user_by_email to find IDs)" },
+                parentType: { type: "string", enum: ["Lead", "Account", "Contact", "Opportunity"], description: "Type of parent entity to link this task to" },
+                parentId: { type: "string", description: "ID of the parent entity (required if parentType is set)" },
                 status: { type: "string", enum: ["Not Started", "Started", "Completed", "Canceled", "Deferred"], description: "Task status", default: "Not Started" },
                 priority: { type: "string", enum: ["Low", "Normal", "High", "Urgent"], description: "Task priority", default: "Normal" },
-                dateEnd: { type: "string", description: "Due date in YYYY-MM-DD format" },
-                description: { type: "string", description: "Task description" },
+                dateEnd: { type: "string", description: "Due date. MUST be YYYY-MM-DD format only (e.g. '2026-06-15'). Do NOT include time. Do NOT use ISO datetime." },
+                description: { type: "string", description: "Task description (max 1000 chars)" },
               },
               required: ["name"],
             },
@@ -356,17 +356,17 @@ export async function setupEspoCRMTools(server: Server, config: Config): Promise
           },
           {
             name: "update_task",
-            description: "Update an existing task",
+            description: "Update an existing task. IMPORTANT: Only use the fields listed here — no other fields are accepted. The dateEnd field accepts ONLY a date (YYYY-MM-DD), never include a time component.",
             inputSchema: {
               type: "object",
               properties: {
-                taskId: { type: "string", description: "The unique ID of the task to update" },
-                name: { type: "string", description: "Task name/title" },
+                taskId: { type: "string", description: "The unique ID of the task to update (required)" },
+                name: { type: "string", description: "Task name/title (max 255 chars)" },
                 assignedUserId: { type: "string", description: "ID of the user to assign this task to" },
                 status: { type: "string", enum: ["Not Started", "Started", "Completed", "Canceled", "Deferred"], description: "Task status" },
                 priority: { type: "string", enum: ["Low", "Normal", "High", "Urgent"], description: "Task priority" },
-                dateEnd: { type: "string", description: "Due date in YYYY-MM-DD format" },
-                description: { type: "string", description: "Task description" },
+                dateEnd: { type: "string", description: "Due date. MUST be YYYY-MM-DD format only (e.g. '2026-06-15'). Do NOT include time. Do NOT use ISO datetime." },
+                description: { type: "string", description: "Task description (max 1000 chars)" },
               },
               required: ["taskId"],
             },
@@ -1536,7 +1536,7 @@ Current time: ${new Date().toISOString()}`;
               parentId: IdSchema.optional(),
               status: z.enum(['Not Started', 'Started', 'Completed', 'Canceled', 'Deferred']).default('Not Started'),
               priority: z.enum(['Low', 'Normal', 'High', 'Urgent']).default('Normal'),
-              dateEnd: DateSchema.optional(),
+              dateEnd: FlexibleDateSchema.optional(),
               description: z.string().max(1000).optional(),
             });
             
@@ -1692,7 +1692,7 @@ Current time: ${new Date().toISOString()}`;
               assignedUserId: IdSchema.optional(),
               status: z.enum(['Not Started', 'Started', 'Completed', 'Canceled', 'Deferred']).optional(),
               priority: z.enum(['Low', 'Normal', 'High', 'Urgent']).optional(),
-              dateEnd: DateSchema.optional(),
+              dateEnd: FlexibleDateSchema.optional(),
               description: z.string().max(1000).optional(),
             });
             
@@ -2215,7 +2215,8 @@ Current time: ${new Date().toISOString()}`;
             });
             
             const validatedArgs = schema.parse(args);
-            const sanitizedData = sanitizeInput(validatedArgs.data);
+            let sanitizedData = sanitizeInput(validatedArgs.data);
+            sanitizedData = normalizeTaskDates(validatedArgs.entityType, sanitizedData);
             if (userIdOverride && !sanitizedData.assignedUserId) sanitizedData.assignedUserId = userIdOverride;
             
             const entity = await client.post<GenericEntity>(validatedArgs.entityType, sanitizedData);
@@ -2290,7 +2291,8 @@ Current time: ${new Date().toISOString()}`;
             });
             
             const validatedArgs = schema.parse(args);
-            const sanitizedData = sanitizeInput(validatedArgs.data);
+            let sanitizedData = sanitizeInput(validatedArgs.data);
+            sanitizedData = normalizeTaskDates(validatedArgs.entityType, sanitizedData);
             
             await client.patch<GenericEntity>(validatedArgs.entityType, validatedArgs.entityId, sanitizedData);
             
