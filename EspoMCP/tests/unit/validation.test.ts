@@ -23,6 +23,7 @@ import {
   validateDateRange,
   validateAmount,
   validateProbability,
+  normalizeTaskDates,
 } from '../../src/utils/validation';
 
 describe('FlexibleDateTimeSchema', () => {
@@ -270,5 +271,71 @@ describe('validateProbability', () => {
 
   it('throws on over 100', () => {
     expect(() => validateProbability(101)).toThrow('between 0 and 100');
+  });
+});
+
+describe('normalizeTaskDates', () => {
+  it('returns data unchanged for non-Task entity types', () => {
+    const data = { dateEnd: '2026-06-15' };
+    expect(normalizeTaskDates('Contact', data)).toEqual(data);
+    expect(normalizeTaskDates('Account', data)).toEqual(data);
+  });
+
+  it('moves date-only dateEnd to dateEndDate and removes dateEnd', () => {
+    const data = { name: 'My Task', dateEnd: '2026-06-15', status: 'Not Started' };
+    const result = normalizeTaskDates('Task', data);
+    expect(result.dateEndDate).toBe('2026-06-15');
+    expect(result.dateEnd).toBeUndefined();
+    expect(result.name).toBe('My Task');
+    expect(result.status).toBe('Not Started');
+  });
+
+  it('moves date-only dateStart to dateStartDate and removes dateStart', () => {
+    const data = { name: 'My Task', dateStart: '2026-06-10' };
+    const result = normalizeTaskDates('Task', data);
+    expect(result.dateStartDate).toBe('2026-06-10');
+    expect(result.dateStart).toBeUndefined();
+  });
+
+  it('keeps full datetime in dateEnd and normalizes T to space', () => {
+    const data = { name: 'My Task', dateEnd: '2026-06-15T14:30:00' };
+    const result = normalizeTaskDates('Task', data);
+    expect(result.dateEnd).toBe('2026-06-15 14:30:00');
+    expect(result.dateEndDate).toBeUndefined();
+  });
+
+  it('keeps space-separated datetime in dateEnd unchanged', () => {
+    const data = { name: 'My Task', dateEnd: '2026-06-15 14:30:00' };
+    const result = normalizeTaskDates('Task', data);
+    expect(result.dateEnd).toBe('2026-06-15 14:30:00');
+    expect(result.dateEndDate).toBeUndefined();
+  });
+
+  it('handles both dateEnd and dateStart together', () => {
+    const data = { name: 'My Task', dateStart: '2026-06-10', dateEnd: '2026-06-15T09:00:00' };
+    const result = normalizeTaskDates('Task', data);
+    expect(result.dateStartDate).toBe('2026-06-10');
+    expect(result.dateStart).toBeUndefined();
+    expect(result.dateEnd).toBe('2026-06-15 09:00:00');
+    expect(result.dateEndDate).toBeUndefined();
+  });
+
+  it('normalizes dateEndDate if provided directly', () => {
+    const data = { name: 'My Task', dateEndDate: '2026-06-15T10:00:00' };
+    const result = normalizeTaskDates('Task', data);
+    expect(result.dateEndDate).toBe('2026-06-15');
+  });
+
+  it('does not mutate the original data object', () => {
+    const data = { name: 'My Task', dateEnd: '2026-06-15' };
+    const original = { ...data };
+    normalizeTaskDates('Task', data);
+    expect(data).toEqual(original);
+  });
+
+  it('handles missing date fields gracefully', () => {
+    const data = { name: 'My Task', status: 'Started' };
+    const result = normalizeTaskDates('Task', data);
+    expect(result).toEqual(data);
   });
 });

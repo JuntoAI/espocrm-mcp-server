@@ -1541,8 +1541,9 @@ Current time: ${new Date().toISOString()}`;
             });
             
             const validatedArgs = schema.parse(args);
-            const sanitizedArgs = sanitizeInput(validatedArgs);
+            let sanitizedArgs = sanitizeInput(validatedArgs);
             if (userIdOverride && !sanitizedArgs.assignedUserId) sanitizedArgs.assignedUserId = userIdOverride;
+            sanitizedArgs = normalizeTaskDates('Task', sanitizedArgs);
             const task = await client.post<Task>('Task', sanitizedArgs);
             
             return {
@@ -1698,7 +1699,8 @@ Current time: ${new Date().toISOString()}`;
             
             const validatedArgs = schema.parse(args);
             const { taskId, ...updateData } = validatedArgs;
-            const sanitizedData = sanitizeInput(updateData);
+            let sanitizedData = sanitizeInput(updateData);
+            sanitizedData = normalizeTaskDates('Task', sanitizedData);
             
             await client.patch<Task>('Task', taskId, sanitizedData);
             

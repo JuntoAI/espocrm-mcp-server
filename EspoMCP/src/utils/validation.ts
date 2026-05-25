@@ -108,19 +108,52 @@ export function validateProbability(probability: number): void {
   }
 }
 
-// Task-specific date fields that should be date-only (YYYY-MM-DD)
-const TASK_DATE_FIELDS = ['dateEnd', 'dateStart', 'dateStartDate', 'dateEndDate'];
+// EspoCRM Task date handling:
+// - `dateEnd` is type "datetimeOptional" → expects full datetime "YYYY-MM-DD HH:mm:ss"
+// - `dateEndDate` is type "date" → expects date-only "YYYY-MM-DD"
+// When a date-only value is provided for dateEnd/dateStart, we must send it via
+// the corresponding *Date field instead, otherwise EspoCRM's DateTime::fromString()
+// rejects it with a 400 validation error.
+const TASK_DATETIME_TO_DATE_MAP: Record<string, string> = {
+  dateEnd: 'dateEndDate',
+  dateStart: 'dateStartDate',
+};
+
+// Checks if a string is date-only (no time component).
+function isDateOnly(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
 
 // Normalizes date fields in entity data when the entity type is Task.
-// Strips time components from date-only fields to prevent EspoCRM validation errors.
+// If dateEnd or dateStart contain a date-only value, moves them to dateEndDate/dateStartDate
+// respectively (which EspoCRM accepts as date-only). If they contain a full datetime,
+// normalizes to space-separated format "YYYY-MM-DD HH:mm:ss".
 export function normalizeTaskDates(entityType: string, data: Record<string, any>): Record<string, any> {
   if (entityType !== 'Task') return data;
   
   const normalized = { ...data };
-  for (const field of TASK_DATE_FIELDS) {
-    if (normalized[field] && typeof normalized[field] === 'string') {
-      normalized[field] = normalizeDate(normalized[field]);
+  
+  for (const [datetimeField, dateField] of Object.entries(TASK_DATETIME_TO_DATE_MAP)) {
+    if (normalized[datetimeField] && typeof normalized[datetimeField] === 'string') {
+      const rawValue = normalized[datetimeField];
+      
+      if (isDateOnly(rawValue)) {
+        // Date-only value → send via the *Date field, remove the datetime field
+        normalized[dateField] = rawValue;
+        delete normalized[datetimeField];
+      } else {
+        // Full datetime → normalize to space-separated format
+        normalized[datetimeField] = rawValue.replace('T', ' ');
+      }
     }
   }
+  
+  // Also normalize dateEndDate/dateStartDate if they were provided directly
+  for (const dateField of ['dateEndDate', 'dateStartDate']) {
+    if (normalized[dateField] && typeof normalized[dateField] === 'string') {
+      normalized[dateField] = normalizeDate(normalized[dateField]);
+    }
+  }
+  
   return normalized;
 }
