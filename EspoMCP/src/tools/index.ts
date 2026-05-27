@@ -2788,6 +2788,15 @@ Current time: ${new Date().toISOString()}`;
             
             const validatedArgs = schema.parse(args);
             const sanitizedArgs = sanitizeInput(validatedArgs);
+
+            // Attribute the note to the real user (not the shared API user)
+            if (userIdOverride) {
+              sanitizedArgs.createdById = userIdOverride;
+            }
+
+            // Mark as AI-assisted so it's visible in the stream
+            sanitizedArgs.post = `[via AI] ${sanitizedArgs.post}`;
+
             const note = await client.post<Note>('Note', sanitizedArgs);
             
             return {
