@@ -577,14 +577,14 @@ export async function setupEspoCRMTools(server: Server, config: Config): Promise
           },
           {
             name: "search_entity",
-            description: "Search any entity type with flexible filters",
+            description: "Search any entity type with flexible filters. Returns at most 10 records by default — use specific filters to narrow results.",
             inputSchema: {
               type: "object",
               properties: {
                 entityType: { type: "string", description: "The entity type to search (e.g., 'Contact', 'CustomEntity')" },
                 filters: { type: "object", description: "Search filters as key-value pairs" },
                 select: { type: "array", items: { type: "string" }, description: "Fields to include in results" },
-                limit: { type: "number", description: "Maximum number of results to return", default: 20 },
+                limit: { type: "number", description: "Maximum number of results to return (max 50)", default: 10 },
                 offset: { type: "number", description: "Number of records to skip", default: 0 },
                 orderBy: { type: "string", description: "Field to order by" },
                 order: { type: "string", enum: ["asc", "desc"], description: "Sort order", default: "asc" },
@@ -2238,7 +2238,7 @@ Current time: ${new Date().toISOString()}`;
               entityType: z.string().min(1),
               filters: z.record(z.any()).optional(),
               select: z.array(z.string()).optional(),
-              limit: z.number().min(1).max(200).default(20),
+              limit: z.number().min(1).max(50).default(10),
               offset: z.number().min(0).default(0),
               orderBy: z.string().optional(),
               order: z.enum(['asc', 'desc']).default('asc'),

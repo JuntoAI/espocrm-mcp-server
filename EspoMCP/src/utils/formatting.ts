@@ -176,10 +176,20 @@ export function formatGenericEntityResults(entities: GenericEntity[], entityType
     return `No ${entityType} records found.`;
   }
 
+  // Hard cap: never return more than 30KB of text from a generic entity search
+  const MAX_OUTPUT_CHARS = 30_000;
+  // Truncate individual field values longer than this
+  const MAX_FIELD_VALUE_LENGTH = 200;
+
   // Standard display fields that get special treatment in the summary line
   const SUMMARY_FIELDS = new Set(['id', 'name', 'firstName', 'lastName', 'emailAddress', 'status']);
+  // Fields that tend to be huge and should be excluded from generic search results
+  const EXCLUDED_FIELDS = new Set(['body', 'bodyPlain', 'data', 'teamsIds', 'teamsNames', 'attachmentsIds', 'attachmentsNames', 'attachmentsTypes', 'isHtml', 'isRead', 'isImportant', 'isUsers', 'isReplied', 'isSystem', 'hasAttachment', 'parentName', 'accountName', 'createdByName', 'modifiedByName', 'assignedUserName', 'personStringData', 'from', 'to', 'cc', 'bcc', 'replyTo', 'messageId', 'messageIdInternal', 'icsContents', 'icsEventData']);
 
-  const formatted = entities.map(entity => {
+  let output = `Found ${entities.length} ${entityType} record${entities.length === 1 ? '' : 's'}:\n`;
+
+  for (let i = 0; i < entities.length; i++) {
+    const entity = entities[i];
     const name = entity.name
       || (entity.firstName && entity.lastName ? `${entity.firstName} ${entity.lastName}` : null)
       || entity.id
@@ -191,21 +201,34 @@ export function formatGenericEntityResults(entities: GenericEntity[], entityType
     const extras = Object.entries(entity)
       .filter(([key, value]) =>
         !SUMMARY_FIELDS.has(key) &&
+        !EXCLUDED_FIELDS.has(key) &&
         value !== null &&
         value !== undefined &&
-        value !== ''
+        value !== '' &&
+        typeof value !== 'object'
       )
       .map(([key, value]) => {
         const label = key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1');
-        const display = Array.isArray(value) ? value.join(', ') : String(value);
+        let display = String(value);
+        if (display.length > MAX_FIELD_VALUE_LENGTH) {
+          display = display.slice(0, MAX_FIELD_VALUE_LENGTH) + '...';
+        }
         return `  ${label}: ${display}`;
       })
       .join('\n');
 
-    return `${name}${email}${status}${extras ? '\n' + extras : ''}`;
-  }).join('\n---\n');
+    output += `${name}${email}${status}${extras ? '\n' + extras : ''}`;
+    if (i < entities.length - 1) output += '\n---\n';
 
-  return `Found ${entities.length} ${entityType} record${entities.length === 1 ? '' : 's'}:\n${formatted}`;
+    // Check if we've exceeded the output cap
+    if (output.length > MAX_OUTPUT_CHARS) {
+      const remaining = entities.length - i - 1;
+      output += `\n\n... truncated. ${remaining} more record${remaining === 1 ? '' : 's'} not shown. Use more specific filters or pagination to narrow results.`;
+      break;
+    }
+  }
+
+  return output;
 }
 
 export function formatGenericEntityDetails(entity: GenericEntity, entityType: string): string {
