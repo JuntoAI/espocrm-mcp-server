@@ -235,6 +235,33 @@ export interface Document {
   [key: string]: any;
 }
 
+export interface Email {
+  id?: string;
+  name: string;
+  status: 'Draft' | 'Sending' | 'Sent' | 'Archived' | 'Failed';
+  from?: string;
+  fromString?: string;
+  fromAddress?: string;
+  to?: string;
+  cc?: string;
+  bcc?: string;
+  body?: string;
+  bodyPlain?: string;
+  isHtml?: boolean;
+  dateSent?: string;
+  parentType?: string;
+  parentId?: string;
+  parentName?: string;
+  accountId?: string;
+  accountName?: string;
+  assignedUserId?: string;
+  assignedUserName?: string;
+  createdAt?: string;
+  modifiedAt?: string;
+  hasAttachment?: boolean;
+  [key: string]: any;
+}
+
 export interface GenericEntity {
   id?: string;
   [key: string]: any;

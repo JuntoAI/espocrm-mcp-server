@@ -2245,15 +2245,27 @@ Current time: ${new Date().toISOString()}`;
             });
             
             const validatedArgs = schema.parse(args);
+
+            // Email entity has special field handling — strip unsafe select fields
+            if (validatedArgs.entityType === 'Email' && validatedArgs.select) {
+              const unsafeEmailFields = new Set(['from', 'to', 'cc', 'bcc', 'replyTo']);
+              validatedArgs.select = validatedArgs.select.filter(f => !unsafeEmailFields.has(f));
+              if (validatedArgs.select.length === 0) delete validatedArgs.select;
+            }
             
             // Convert filters to EspoCRM where clauses
             const where = [];
             if (validatedArgs.filters) {
+              // Email entity: remap unsafe filter attributes
+              const emailFilterRemap: Record<string, string> = { from: 'fromString', to: 'personStringData' };
               for (const [key, value] of Object.entries(validatedArgs.filters)) {
                 if (value !== null && value !== undefined) {
+                  const attribute = (validatedArgs.entityType === 'Email' && emailFilterRemap[key])
+                    ? emailFilterRemap[key]
+                    : key;
                   where.push({
                     type: typeof value === 'string' ? 'contains' as const : 'equals' as const,
-                    attribute: key,
+                    attribute,
                     value: value
                   });
                 }

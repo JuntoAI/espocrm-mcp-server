@@ -1,4 +1,4 @@
-import { Contact, Account, Opportunity, Lead, Task, Meeting, User, Team, GenericEntity } from "../espocrm/types.js";
+import { Contact, Account, Opportunity, Lead, Task, Meeting, User, Team, Email, GenericEntity } from "../espocrm/types.js";
 
 /**
  * Appends any extra fields (including custom fields) that aren't in the known set.
@@ -483,6 +483,60 @@ export function formatNoteResults(notes: any[]): string {
   }).join('\n');
 
   return `Found ${notes.length} note${notes.length === 1 ? '' : 's'}:\n${formatted}`;
+}
+
+export function formatEmailResults(emails: Email[]): string {
+  if (!emails || emails.length === 0) {
+    return "No emails found.";
+  }
+
+  const formatted = emails.map(email => {
+    const id = email.id ? `[${email.id}] ` : '';
+    const from = email.fromString ? ` | From: ${email.fromString}` : (email.from ? ` | From: ${email.from}` : '');
+    const to = email.to ? ` | To: ${email.to}` : '';
+    const date = email.dateSent ? ` | ${formatDateTime(email.dateSent)}` : (email.createdAt ? ` | ${formatDateTime(email.createdAt)}` : '');
+    const parent = email.parentName ? ` | Related: ${email.parentName}` : '';
+    return `${id}${email.name} (${email.status})${from}${to}${date}${parent}`;
+  }).join('\n');
+
+  return `Found ${emails.length} email${emails.length === 1 ? '' : 's'}:\n${formatted}`;
+}
+
+export function formatEmailDetails(email: Email): string {
+  const KNOWN = new Set(['id', 'name', 'status', 'from', 'to', 'cc', 'bcc', 'body', 'bodyPlain',
+    'isHtml', 'dateSent', 'parentType', 'parentId', 'parentName', 'accountId', 'accountName',
+    'assignedUserId', 'assignedUserName', 'hasAttachment', 'createdAt', 'modifiedAt']);
+
+  let details = `Email Details:\n`;
+  details += `Subject: ${email.name}\n`;
+  details += `Status: ${email.status}\n`;
+
+  if (email.from) details += `From: ${email.from}\n`;
+  if (email.to) details += `To: ${email.to}\n`;
+  if (email.cc) details += `CC: ${email.cc}\n`;
+  if (email.bcc) details += `BCC: ${email.bcc}\n`;
+  if (email.dateSent) details += `Date Sent: ${formatDateTime(email.dateSent)}\n`;
+  if (email.parentName) details += `Related to: ${email.parentName} (${email.parentType})\n`;
+  if (email.accountName) details += `Account: ${email.accountName}\n`;
+  if (email.assignedUserName) details += `Assigned User: ${email.assignedUserName}\n`;
+  if (email.hasAttachment) details += `Has Attachment: Yes\n`;
+
+  // Body — prefer plain text for readability, fall back to HTML
+  const bodyContent = email.bodyPlain || email.body;
+  if (bodyContent) {
+    // Truncate very long bodies
+    const maxBodyLength = 2000;
+    const truncated = bodyContent.length > maxBodyLength
+      ? bodyContent.slice(0, maxBodyLength) + '\n... [truncated]'
+      : bodyContent;
+    details += `\n--- Body ---\n${truncated}\n--- End Body ---\n`;
+  }
+
+  details += formatExtraFields(email, KNOWN);
+  if (email.createdAt) details += `Created: ${formatDateTime(email.createdAt)}\n`;
+  if (email.modifiedAt) details += `Modified: ${formatDateTime(email.modifiedAt)}\n`;
+
+  return details.trim();
 }
 
 export function formatLargeResultSet<T>(items: T[], formatter: (items: T[]) => string, maxItems = 20): string {

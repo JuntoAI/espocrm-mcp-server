@@ -24,7 +24,9 @@ export class MCPErrorHandler {
         case 404:
           throw new Error(`Resource not found: ${context}. Check entity ID and permissions.`);
         case 400:
-          const message = data?.message || data?.messageTranslation || 'Invalid request data';
+          const message = typeof data?.message === 'string' 
+            ? data.message 
+            : (data?.messageTranslation || (data?.message ? JSON.stringify(data.message) : 'Invalid request data'));
           // Surface field-level validation details if available
           const details = data?.data || data?.details;
           const detailStr = details ? ` (details: ${JSON.stringify(details)})` : '';
