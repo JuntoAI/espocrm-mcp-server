@@ -840,6 +840,12 @@ export async function setupEspoCRMTools(server: Server, config: Config): Promise
         delete (args as Record<string, unknown>)._userIdOverride;
       }
 
+      // Per-user name override — used for attribution in stream notes
+      const userNameOverride = (args as Record<string, unknown>)?._userNameOverride as string | undefined;
+      if (args && '_userNameOverride' in (args as Record<string, unknown>)) {
+        delete (args as Record<string, unknown>)._userNameOverride;
+      }
+
       try {
         switch (name) {
           case "create_contact": {
@@ -2806,8 +2812,11 @@ Current time: ${new Date().toISOString()}`;
               sanitizedArgs.createdById = userIdOverride;
             }
 
-            // Mark as AI-assisted so it's visible in the stream
-            sanitizedArgs.post = `[via AI] ${sanitizedArgs.post}`;
+            // Mark as AI-assisted with user attribution so it's visible in the stream
+            const attribution = userNameOverride
+              ? `[via AI · triggered by ${userNameOverride}]`
+              : '[via AI]';
+            sanitizedArgs.post = `${attribution} ${sanitizedArgs.post}`;
 
             const note = await client.post<Note>('Note', sanitizedArgs);
             
